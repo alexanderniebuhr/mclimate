@@ -12,6 +12,22 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "battery_voltage": {
+        "name": "Battery voltage"
+      },
+      "motor_position": {
+        "name": "Motor position"
+      },
+      "motor_range": {
+        "name": "Motor range"
+      },
+      "valve_openness": {
+        "name": "Valve openness"
+      }
+    }
+  },
   "exceptions": {
     "command_failed": {
       "message": "The LoRaWAN server could not queue the command."

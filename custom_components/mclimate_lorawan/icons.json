@@ -1,0 +1,15 @@
+{
+  "entity": {
+    "sensor": {
+      "motor_position": {
+        "default": "mdi:cog"
+      },
+      "motor_range": {
+        "default": "mdi:arrow-expand-horizontal"
+      },
+      "valve_openness": {
+        "default": "mdi:valve"
+      }
+    }
+  }
+}
