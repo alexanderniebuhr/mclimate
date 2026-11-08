@@ -211,5 +211,25 @@
     "valve_change_too_small": {
       "message": "The valve has to move by at least 17 motor steps. Choose a position further from the current one."
     }
+  },
+  "options": {
+    "abort": {
+      "no_devices": "No MClimate devices are loaded."
+    },
+    "step": {
+      "init": {
+        "title": "Choose a device",
+        "data": {
+          "device": "Device"
+        }
+      },
+      "room_sensor": {
+        "title": "Room temperature sensor",
+        "description": "In automatic mode the device offset follows this sensor. In automatic mode with external sensor the reading replaces the device sensor. Clear the field to unlink it.",
+        "data": {
+          "room_sensor": "Temperature sensor"
+        }
+      }
+    }
   }
 }
