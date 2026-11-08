@@ -3,10 +3,15 @@
 import pytest
 
 from custom_components.mclimate_lorawan.protocol import (
+    REGISTER_BY_FIELD,
+    REGISTERS,
     VickiProtocolError,
+    build_settings_request,
     decode_uplink,
     encode_child_lock,
+    encode_external_temperature,
     encode_target_temperature,
+    encode_valve_openness,
 )
 
 
@@ -149,7 +154,7 @@ def test_no_target_in_uplink() -> None:
         "A6",
         "0423",
         "12",
-        "1209",
+        "54",
     ],
 )
 def test_invalid_uplink(payload: str) -> None:
@@ -163,3 +168,124 @@ def test_encoders() -> None:
     assert encode_target_temperature(25.8) == bytes.fromhex("510102")
     assert encode_child_lock(True) == bytes.fromhex("0701")
     assert encode_child_lock(False) == bytes.fromhex("0700")
+    assert encode_valve_openness(10) == bytes.fromhex("4E0A")
+    assert encode_external_temperature(21.5) == bytes.fromhex("3C00D7")
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        ("1209", {"keep_alive_period": 9}),
+        ("15051E", {"target_temperature_min": 5, "target_temperature_max": 30}),
+        ("1801", {"operating_mode": "automatic"}),
+        ("1F01", {"primary_mode": "cooling"}),
+        ("3400", {"child_lock_offline": False}),
+        ("36123456", {"pi_proportional_gain": 9.10222}),
+        ("3D112233", {"pi_integral_gain": 8.5668}),
+        ("400B", {"pi_run_period": 11}),
+        ("4210", {"pi_hysteresis": 1.6}),
+        (
+            "4601020F",
+            {"window_detection": True, "window_duration": 10, "window_delta": 1.5},
+        ),
+        (
+            "4A3C5A07",
+            {
+                "anti_freeze_activation": 6.0,
+                "anti_freeze_deactivation": 9.0,
+                "anti_freeze_target": 7,
+            },
+        ),
+        ("4D03E8", {"pi_max_integral": 100.0}),
+        ("500064", {"valve_maximum": 100, "valve_minimum": 0}),
+        ("5438", {"temperature_offset": 4.9}),
+        ("5500", {}),
+        ("5601", {"display_units": "fahrenheit"}),
+        ("1B00", {"uplink_type": "unconfirmed"}),
+        ("19C6", {"join_retry_period": 990}),
+        ("1D020C", {"watchdog_confirmed": 2, "watchdog_unconfirmed": 12}),
+        ("6200", {"setback_time": 0}),
+        ("6406", {"led_duration": 3.0}),
+        ("660000", {"offline_target": 0.0}),
+        ("6800", {"algorithm_paused": False}),
+    ],
+)
+def test_setting_responses(response: str, expected: dict[str, object]) -> None:
+    """Decode the documented response of every setting."""
+    payload = bytes.fromhex(response)
+    if not expected:
+        with pytest.raises(VickiProtocolError):
+            decode_uplink(payload)
+        return
+    assert decode_uplink(payload).settings == expected
+
+
+@pytest.mark.parametrize(
+    ("field", "values", "command"),
+    [
+        ("keep_alive_period", (10,), "020A"),
+        ("target_temperature_min", (16, 24), "081018"),
+        ("operating_mode", ("automatic",), "0D01"),
+        ("primary_mode", ("heating",), "1E00"),
+        ("child_lock_offline", (True,), "3501"),
+        ("pi_proportional_gain", (2.74688,), "37057E67"),
+        ("pi_integral_gain", (1,), "3E020000"),
+        ("pi_run_period", (15,), "410F"),
+        ("pi_hysteresis", (0.3,), "4303"),
+        ("window_detection", (True, 30, 1.3), "4501060D"),
+        ("anti_freeze_activation", (6.0, 9.0, 7), "493C5A07"),
+        ("pi_max_integral", (30.0,), "4C012C"),
+        ("valve_maximum", (60, 20), "4F2850"),
+        ("temperature_offset", (-5,), "5300"),
+        ("temperature_offset", (0,), "531C"),
+        ("temperature_offset", (2,), "5327"),
+        ("temperature_offset", (5,), "5338"),
+        ("display_units", ("fahrenheit",), "5501"),
+        ("uplink_type", ("confirmed",), "1101"),
+        ("join_retry_period", (1200,), "10F0"),
+        ("watchdog_confirmed", (3, 0), "1C0300"),
+        ("setback_time", (60,), "6106"),
+        ("led_duration", (3,), "6306"),
+        ("offline_target", (21.5,), "6500D7"),
+        ("algorithm_paused", (True,), "6701"),
+    ],
+)
+def test_setting_commands(field: str, values: tuple[object, ...], command: str) -> None:
+    """Encode the documented command of every setting."""
+    assert REGISTER_BY_FIELD[field].encode(*values) == bytes.fromhex(command)
+
+
+@pytest.mark.parametrize(
+    ("field", "values", "expected"),
+    [
+        ("target_temperature_min", (24, 16), "invalid_target_limits"),
+        ("target_temperature_min", (16, 24), None),
+        ("valve_maximum", (20, 15), "invalid_valve_limits"),
+        ("valve_maximum", (60, 20), None),
+        ("anti_freeze_activation", (25.0, 25.5, 8), "invalid_anti_freeze"),
+        ("anti_freeze_activation", (6.0, 9.0, 7), None),
+        ("offline_target", (3,), "invalid_offline_target"),
+        ("offline_target", (0,), None),
+        ("offline_target", (21.5,), None),
+    ],
+)
+def test_setting_validation(
+    field: str, values: tuple[float, ...], expected: str | None
+) -> None:
+    """Catch values the device would silently ignore."""
+    check = REGISTER_BY_FIELD[field].error
+    assert check is not None
+    assert check(*values) == expected
+
+
+def test_settings_request_fits_one_uplink() -> None:
+    """Leave room for the keep-alive in the slowest uplink."""
+    request = build_settings_request(REGISTERS)
+    lengths = {register.get_code: register.length + 1 for register in REGISTERS}
+    assert 0 < len(request) < len(REGISTERS)
+    assert sum(lengths[code] for code in request) <= 42
+
+
+def test_unknown_operating_mode_is_not_guessed() -> None:
+    """Mode 03 needs a paired sensor and is not offered."""
+    assert decode_uplink(bytes.fromhex("1803")).settings == {"operating_mode": None}
