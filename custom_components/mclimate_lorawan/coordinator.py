@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable, Coroutine
+from datetime import datetime, timedelta
 import logging
 import time
 from typing import Any, override
@@ -14,6 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import CONF_ROOM_SENSORS, DOMAIN
@@ -30,6 +32,11 @@ OFFSET_WAIT_UPLINKS = 2
 
 EXTERNAL_DEADBAND = 0.2
 EXTERNAL_REFRESH_SECONDS = 6 * 3600
+
+# The device falls back to automatic after 12 hours without a motor command or
+# external reading, without saying so in the keep-alive.
+MODE_REFRESH_INTERVAL = timedelta(hours=1)
+FALLBACK_MODES = ("manual", "automatic_external")
 
 
 def _format_version(version: Version | None) -> str | None:
@@ -56,6 +63,7 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
         self._offset_wait = 0
         self._last_external: float | None = None
         self._last_external_at = 0.0
+        self._mode_checked_at: datetime | None = None
         self.async_set_updated_data(device)
         self._unsubscribe = device.add_update_listener(self._async_device_updated)
 
@@ -90,6 +98,7 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
             self._seen_keep_alive = keep_alive
             self._async_request_state()
             self._async_sync_room_sensor(keep_alive)
+            self._async_check_operating_mode()
 
     @callback
     def _async_update_device_registry(self) -> None:
@@ -160,6 +169,19 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
                 self.data.async_send_state_request(request),
                 self.data.state_request_failed,
             )
+
+    @callback
+    def _async_check_operating_mode(self) -> None:
+        """Keep asking while the device can leave its mode on its own."""
+        if self.data.settings.get("operating_mode") not in FALLBACK_MODES:
+            self._mode_checked_at = None
+            return
+        now = dt_util.utcnow()
+        if self._mode_checked_at is None:
+            self._mode_checked_at = now
+        elif now - self._mode_checked_at >= MODE_REFRESH_INTERVAL:
+            self._mode_checked_at = now
+            self._async_run(self.data.async_refresh_operating_mode())
 
     @callback
     def _async_sync_room_sensor(self, keep_alive: KeepAlive) -> None:

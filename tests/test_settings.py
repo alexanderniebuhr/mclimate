@@ -1,5 +1,8 @@
 """Test device settings, valve control and the room sensor."""
 
+from datetime import timedelta
+
+from freezegun.api import FrozenDateTimeFactory
 from lorawan_connection import DeviceDescriptor
 from lorawan_connection.mock import MockConnection
 import pytest
@@ -297,6 +300,41 @@ async def test_manual_ring_change_ends_algorithm_pause(
     await send_uplink(hass, mock_connection, descriptor, f"2816{KEEP_ALIVE}")
 
     assert hass.states.get(entity_id).state == STATE_OFF
+
+
+async def test_operating_mode_is_rechecked_while_it_can_change(
+    hass: HomeAssistant,
+    mock_connection: MockConnection,
+    descriptor: DeviceDescriptor,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A device leaves manual mode by itself, so keep asking."""
+    await send_uplink(hass, mock_connection, descriptor, f"1800{KEEP_ALIVE}")
+
+    freezer.tick(timedelta(minutes=10))
+    await send_uplink(hass, mock_connection, descriptor)
+    assert last_data(mock_connection) != "18"
+
+    freezer.tick(timedelta(hours=1))
+    await send_uplink(hass, mock_connection, descriptor)
+    assert last_data(mock_connection) == "18"
+
+
+async def test_automatic_mode_is_not_rechecked(
+    hass: HomeAssistant,
+    mock_connection: MockConnection,
+    descriptor: DeviceDescriptor,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Automatic is where the device falls back to, so it cannot change."""
+    await send_uplink(hass, mock_connection, descriptor, f"1801{KEEP_ALIVE}")
+
+    freezer.tick(timedelta(hours=2))
+    await send_uplink(hass, mock_connection, descriptor)
+
+    assert not any(
+        downlink.data == b"\x18" for downlink in mock_connection.downlinks.values()
+    )
 
 
 async def test_restart(

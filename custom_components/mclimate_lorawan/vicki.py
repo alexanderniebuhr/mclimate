@@ -265,6 +265,12 @@ class Vicki(Device):
         self._check_firmware()
         await self._async_send(encode_external_temperature(value))
 
+    async def async_refresh_operating_mode(self) -> None:
+        """Ask the device which operating mode it is in."""
+        await self._async_send(
+            bytes((REGISTER_BY_FIELD["operating_mode"].get_code,))
+        )
+
     async def async_restart(self) -> None:
         """Queue a device restart, which also recalibrates the motor."""
         self._check_firmware()

@@ -121,9 +121,10 @@ automation:
 - Values stay unknown after a restart until the next keep-alive.
 - Several commands sent within one keep-alive period are delivered one uplink
   at a time, so the displayed value can briefly jump back.
-- Manual mode ignores the target temperature, so it is refused there. On
-  firmware 5.0 and later the device returns to automatic after 12 hours without
-  a motor command.
+- Manual mode ignores the target temperature, so it is refused there. The device
+  returns to automatic after 12 hours without a motor command, and external
+  sensor mode does the same after 12 hours without a reading. Home Assistant
+  re-reads the mode hourly while it is in either one.
 - A valve change must move the motor by at least 17 steps, because MClimate warns
   that smaller moves make the device misbehave.
 - Automatic setback, offline target and the watchdog depend on when the device
