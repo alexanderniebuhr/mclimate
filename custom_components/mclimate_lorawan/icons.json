@@ -23,6 +23,59 @@
         "default": "mdi:thermometer-alert"
       }
     },
+    "number": {
+      "join_retry_period": {
+        "default": "mdi:timer-sync-outline"
+      },
+      "keep_alive_period": {
+        "default": "mdi:timer-sync"
+      },
+      "led_duration": {
+        "default": "mdi:led-on"
+      },
+      "pi_hysteresis": {
+        "default": "mdi:tune"
+      },
+      "pi_integral_gain": {
+        "default": "mdi:tune"
+      },
+      "pi_max_integral": {
+        "default": "mdi:tune"
+      },
+      "pi_proportional_gain": {
+        "default": "mdi:tune"
+      },
+      "pi_run_period": {
+        "default": "mdi:timer-cog"
+      },
+      "setback_time": {
+        "default": "mdi:timer-refresh"
+      },
+      "temperature_offset": {
+        "default": "mdi:thermometer-plus"
+      },
+      "valve_maximum": {
+        "default": "mdi:valve-open"
+      },
+      "valve_minimum": {
+        "default": "mdi:valve-closed"
+      },
+      "valve_position": {
+        "default": "mdi:valve"
+      },
+      "watchdog_confirmed": {
+        "default": "mdi:dog-service"
+      },
+      "watchdog_unconfirmed": {
+        "default": "mdi:dog-service"
+      },
+      "window_delta": {
+        "default": "mdi:thermometer-minus"
+      },
+      "window_duration": {
+        "default": "mdi:timer-outline"
+      }
+    },
     "sensor": {
       "motor_position": {
         "default": "mdi:cog"
@@ -35,11 +88,20 @@
       }
     },
     "switch": {
+      "algorithm_paused": {
+        "default": "mdi:pause-circle"
+      },
       "child_lock": {
         "default": "mdi:lock-open-variant",
         "state": {
           "on": "mdi:lock"
         }
+      },
+      "child_lock_offline": {
+        "default": "mdi:lock-clock"
+      },
+      "window_detection": {
+        "default": "mdi:window-open"
       }
     }
   }

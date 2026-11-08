@@ -39,6 +39,77 @@
         "name": "Temperature sensor broken"
       }
     },
+    "number": {
+      "anti_freeze_activation": {
+        "name": "Anti-freeze activation"
+      },
+      "anti_freeze_deactivation": {
+        "name": "Anti-freeze deactivation"
+      },
+      "anti_freeze_target": {
+        "name": "Anti-freeze target"
+      },
+      "join_retry_period": {
+        "name": "Join retry period"
+      },
+      "keep_alive_period": {
+        "name": "Keep-alive period"
+      },
+      "led_duration": {
+        "name": "Setpoint LED duration"
+      },
+      "offline_target": {
+        "name": "Offline target"
+      },
+      "pi_hysteresis": {
+        "name": "PI hysteresis"
+      },
+      "pi_integral_gain": {
+        "name": "PI integral gain"
+      },
+      "pi_max_integral": {
+        "name": "PI maximum integral"
+      },
+      "pi_proportional_gain": {
+        "name": "PI proportional gain"
+      },
+      "pi_run_period": {
+        "name": "PI run period"
+      },
+      "setback_time": {
+        "name": "Automatic setback time"
+      },
+      "target_temperature_max": {
+        "name": "Maximum target on ring"
+      },
+      "target_temperature_min": {
+        "name": "Minimum target on ring"
+      },
+      "temperature_offset": {
+        "name": "Temperature offset"
+      },
+      "valve_maximum": {
+        "name": "Maximum valve openness"
+      },
+      "valve_minimum": {
+        "name": "Minimum valve openness"
+      },
+      "valve_position": {
+        "name": "Valve position"
+      },
+      "watchdog_confirmed": {
+        "name": "Watchdog confirmed uplinks"
+      },
+      "watchdog_unconfirmed": {
+        "name": "Watchdog unconfirmed period"
+      },
+      "window_delta": {
+        "name": "Open window temperature drop"
+      },
+      "window_duration": {
+        "name": "Open window close time"
+      }
+    },
     "sensor": {
       "battery_voltage": {
         "name": "Battery voltage"
@@ -54,8 +125,17 @@
       }
     },
     "switch": {
+      "algorithm_paused": {
+        "name": "Pause temperature algorithm"
+      },
       "child_lock": {
         "name": "Child lock"
+      },
+      "child_lock_offline": {
+        "name": "Keep child lock when offline"
+      },
+      "window_detection": {
+        "name": "Open window detection"
       }
     }
   },
@@ -68,6 +148,36 @@
     },
     "firmware_too_old": {
       "message": "This command needs newer device firmware. The integration requires firmware 4.3 or later, and some settings need 4.4 or 4.6."
+    },
+    "firmware_unknown": {
+      "message": "The device has not reported its firmware yet. Try again after the next keep-alive."
+    },
+    "invalid_anti_freeze": {
+      "message": "The anti-freeze target must be between the activation and deactivation thresholds."
+    },
+    "invalid_offline_target": {
+      "message": "The offline target must be 0 to disable it, or between 5 and 30 °C."
+    },
+    "invalid_target_limits": {
+      "message": "The minimum target temperature must be below the maximum."
+    },
+    "invalid_valve_limits": {
+      "message": "The maximum valve openness must be at least 10 percent above the minimum."
+    },
+    "requires_automatic_mode": {
+      "message": "The target temperature only applies in an automatic operating mode."
+    },
+    "requires_manual_mode": {
+      "message": "The valve position only applies in manual operating mode."
+    },
+    "room_sensor_required": {
+      "message": "Link a room temperature sensor in the integration options first."
+    },
+    "setting_not_loaded": {
+      "message": "The device has not reported this group of settings yet. Try again after the next keep-alive."
+    },
+    "valve_change_too_small": {
+      "message": "The valve has to move by at least 17 motor steps. Choose a position further from the current one."
     }
   }
 }
