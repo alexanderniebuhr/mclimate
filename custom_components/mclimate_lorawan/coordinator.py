@@ -1,25 +1,35 @@
 """MClimate device updates."""
 
 import asyncio
+from collections.abc import Callable, Coroutine
 import logging
 import time
-from typing import override
+from typing import Any, override
 
 from lorawan_connection import DownlinkError
 
 from homeassistant.components.lorawan import device_identifier
+from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util.unit_conversion import TemperatureConverter
 
-from .const import DOMAIN
-from .protocol import Version
-from .vicki import Vicki
+from .const import CONF_ROOM_SENSORS, DOMAIN
+from .protocol import KeepAlive, Version
+from .vicki import CommandRejected, Vicki
 
 _LOGGER = logging.getLogger(__name__)
 
-VERSION_REQUEST_INTERVAL = 3600
+# The room sensor only moves the offset for a difference worth a downlink, and
+# then waits until the device can have reported the effect.
+OFFSET_DEADBAND = 0.5
+OFFSET_LIMIT = 4.9
+OFFSET_WAIT_UPLINKS = 2
+
+EXTERNAL_DEADBAND = 0.2
+EXTERNAL_REFRESH_SECONDS = 6 * 3600
 
 
 def _format_version(version: Version | None) -> str | None:
@@ -41,8 +51,11 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
         )
         self._entry_id = entry_id
         self._registered_firmware: Version | None = None
-        self._versions_requested_at: float | None = None
-        self._version_task: asyncio.Task[None] | None = None
+        self._seen_keep_alive: KeepAlive | None = None
+        self._tasks: set[asyncio.Task[None]] = set()
+        self._offset_wait = 0
+        self._last_external: float | None = None
+        self._last_external_at = 0.0
         self.async_set_updated_data(device)
         self._unsubscribe = device.add_update_listener(self._async_device_updated)
 
@@ -72,7 +85,11 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
         """Update entities and fill in what the device has not reported yet."""
         self.async_set_updated_data(self.data)
         self._async_update_device_registry()
-        self._async_request_versions()
+        keep_alive = self.data.keep_alive
+        if keep_alive is not None and keep_alive is not self._seen_keep_alive:
+            self._seen_keep_alive = keep_alive
+            self._async_request_state()
+            self._async_sync_room_sensor(keep_alive)
 
     @callback
     def _async_update_device_registry(self) -> None:
@@ -91,34 +108,102 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
                 sw_version=_format_version(firmware),
             )
 
+    @property
+    def room_sensor(self) -> str | None:
+        """Return the temperature sensor linked to this device."""
+        entry = self.hass.config_entries.async_get_entry(self._entry_id)
+        if entry is None:
+            return None
+        sensors = entry.options.get(CONF_ROOM_SENSORS, {})
+        return sensors.get(self.data.descriptor.dev_eui)
+
+    def _room_temperature(self) -> float | None:
+        """Return the linked sensor's reading in degrees Celsius."""
+        if (sensor := self.room_sensor) is None:
+            return None
+        if (state := self.hass.states.get(sensor)) is None:
+            return None
+        try:
+            value = float(state.state)
+        except ValueError:
+            return None
+        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT, UnitOfTemperature.CELSIUS)
+        return TemperatureConverter.convert(value, unit, UnitOfTemperature.CELSIUS)
+
     @callback
-    def _async_request_versions(self) -> None:
-        """Ask a device that is talking to us for its firmware version."""
-        if self.data.keep_alive is None or self.data.firmware_version is not None:
+    def _async_run(
+        self,
+        command: Coroutine[Any, Any, None],
+        on_failure: Callable[[], None] | None = None,
+    ) -> None:
+        """Send a command the user did not ask for in the background."""
+
+        async def _async_guarded() -> None:
+            try:
+                await command
+            except DownlinkError, TimeoutError, CommandRejected:
+                _LOGGER.debug("Could not send a command to %s", self.name)
+                if on_failure is not None:
+                    on_failure()
+
+        task = self.hass.async_create_background_task(
+            _async_guarded(), f"{self.name} command"
+        )
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    @callback
+    def _async_request_state(self) -> None:
+        """Ask the device for firmware and settings it has not reported yet."""
+        if (request := self.data.next_state_request()) is not None:
+            self._async_run(
+                self.data.async_send_state_request(request),
+                self.data.state_request_failed,
+            )
+
+    @callback
+    def _async_sync_room_sensor(self, keep_alive: KeepAlive) -> None:
+        """Apply the linked room sensor according to the operating mode."""
+        if (room := self._room_temperature()) is None:
             return
+        mode = self.data.settings.get("operating_mode")
+        if mode == "automatic_external":
+            self._async_send_external_temperature(room)
+        elif mode == "automatic":
+            self._async_adjust_offset(room, keep_alive)
+
+    @callback
+    def _async_send_external_temperature(self, room: float) -> None:
+        """Forward a changed reading, and refresh it now and then regardless."""
         now = time.monotonic()
         if (
-            self._versions_requested_at is not None
-            and now - self._versions_requested_at < VERSION_REQUEST_INTERVAL
+            self._last_external is not None
+            and abs(room - self._last_external) < EXTERNAL_DEADBAND
+            and now - self._last_external_at < EXTERNAL_REFRESH_SECONDS
         ):
             return
-        self._versions_requested_at = now
-        self._version_task = self.hass.async_create_background_task(
-            self._async_send_version_request(), f"{self.name} version request"
-        )
+        self._last_external = room
+        self._last_external_at = now
+        self._async_run(self.data.async_set_external_temperature(room))
 
-    async def _async_send_version_request(self) -> None:
-        """Queue the version request, retrying on a later uplink on failure."""
-        try:
-            await self.data.async_request_versions()
-        except DownlinkError, TimeoutError:
-            _LOGGER.debug("Could not request versions from %s", self.name)
-            self._versions_requested_at = None
+    @callback
+    def _async_adjust_offset(self, room: float, keep_alive: KeepAlive) -> None:
+        """Move the offset so the device reading follows the room sensor."""
+        if self._offset_wait:
+            self._offset_wait -= 1
+            return
+        if (offset := self.data.settings.get("temperature_offset")) is None:
+            return
+        wanted = round(offset + room - keep_alive.temperature, 1)
+        wanted = max(-OFFSET_LIMIT, min(OFFSET_LIMIT, wanted))
+        if abs(wanted - offset) >= OFFSET_DEADBAND:
+            self._offset_wait = OFFSET_WAIT_UPLINKS
+            self._async_run(self.data.async_set_setting("temperature_offset", wanted))
 
     @override
     async def async_shutdown(self) -> None:
         """Unsubscribe from device updates."""
         self._unsubscribe()
-        if self._version_task is not None:
-            self._version_task.cancel()
+        for task in self._tasks:
+            task.cancel()
         await super().async_shutdown()
