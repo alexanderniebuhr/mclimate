@@ -33,6 +33,14 @@
       "valve_openness": {
         "default": "mdi:valve"
       }
+    },
+    "switch": {
+      "child_lock": {
+        "default": "mdi:lock-open-variant",
+        "state": {
+          "on": "mdi:lock"
+        }
+      }
     }
   }
 }

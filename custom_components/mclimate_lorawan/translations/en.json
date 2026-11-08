@@ -52,6 +52,11 @@
       "valve_openness": {
         "name": "Valve openness"
       }
+    },
+    "switch": {
+      "child_lock": {
+        "name": "Child lock"
+      }
     }
   },
   "exceptions": {
