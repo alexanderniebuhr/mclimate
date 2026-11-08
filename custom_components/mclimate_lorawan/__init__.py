@@ -17,7 +17,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 type MClimateConfigEntry = ConfigEntry[DeviceManager[Vicki, VickiCoordinator]]
 
-PLATFORMS = []
+PLATFORMS = [Platform.CLIMATE]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MClimateConfigEntry) -> None:
