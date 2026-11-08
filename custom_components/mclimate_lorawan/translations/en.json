@@ -110,6 +110,38 @@
         "name": "Open window close time"
       }
     },
+    "select": {
+      "display_units": {
+        "name": "Display units",
+        "state": {
+          "celsius": "Celsius",
+          "fahrenheit": "Fahrenheit",
+          "scale": "Scale 0-5"
+        }
+      },
+      "operating_mode": {
+        "name": "Operating mode",
+        "state": {
+          "manual": "Manual valve control",
+          "automatic": "Automatic",
+          "automatic_external": "Automatic with external sensor"
+        }
+      },
+      "primary_mode": {
+        "name": "Primary mode",
+        "state": {
+          "heating": "Heating",
+          "cooling": "Cooling"
+        }
+      },
+      "uplink_type": {
+        "name": "Uplink type",
+        "state": {
+          "unconfirmed": "Unconfirmed",
+          "confirmed": "Confirmed"
+        }
+      }
+    },
     "sensor": {
       "battery_voltage": {
         "name": "Battery voltage"

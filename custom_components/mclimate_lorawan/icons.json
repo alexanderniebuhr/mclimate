@@ -76,6 +76,20 @@
         "default": "mdi:timer-outline"
       }
     },
+    "select": {
+      "display_units": {
+        "default": "mdi:temperature-celsius"
+      },
+      "operating_mode": {
+        "default": "mdi:cog-transfer"
+      },
+      "primary_mode": {
+        "default": "mdi:sun-snowflake-variant"
+      },
+      "uplink_type": {
+        "default": "mdi:upload-network"
+      }
+    },
     "sensor": {
       "motor_position": {
         "default": "mdi:cog"
