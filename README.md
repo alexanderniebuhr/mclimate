@@ -38,15 +38,46 @@ and devices added later appear automatically.
 | Valve openness | Percent open, derived from the motor position |
 | Open window, anti-freeze | Device status flags |
 | Child lock | Locks the rotary ring |
+| Operating mode | Automatic, automatic with external sensor, or manual valve control |
+| Valve position | Sets the valve directly, only available in manual mode |
+| Keep-alive period, temperature offset | Enabled by default |
+| Minimum and maximum target on ring | Limits for turning the ring, commands can go beyond them |
+| Open window detection, close time, temperature drop | Detection is off by default on the device |
 | Battery voltage, battery low | Diagnostics |
 | Temperature sensor broken, motor calibration failed, attached to backplate | Diagnostics |
 | Battery, motor position, motor range, motor consumption | Diagnostics, disabled by default |
+| Anti-freeze thresholds and target, offline target, automatic setback | Settings, disabled by default |
+| Valve minimum and maximum, PI gains, integral limit, run period, hysteresis | Settings, disabled by default |
+| Primary mode, display units, LED duration, keep child lock when offline, pause algorithm | Settings, disabled by default |
+| Uplink type, join retry period, watchdog periods, restart | Settings, disabled by default |
+
+Settings marked for firmware 4.4 or 4.6 by MClimate become unavailable on older
+firmware. These are display units (4.4), and automatic setback, offline target,
+LED duration, pause algorithm and the scale display (4.6).
+
+## Options
+
+Under **Configure** on the integration you can link a room temperature sensor to
+each Vicki. The operating mode decides how it is used:
+
+- **Automatic:** the device offset moves so its reading follows the sensor. It
+  only changes for a difference of 0.5 °C or more, within the device limit of
+  ±4.9 °C.
+- **Automatic with external sensor:** the reading replaces the device sensor for
+  the control algorithm. Open window detection keeps using the device sensor.
+
+Each adjustment uses a downlink. Clear the field to unlink the sensor.
 
 ## How data updates
 
 The Vicki is a LoRaWAN Class A device. It reports on its keep-alive period,
 which is 10 minutes by default, and can only receive a command right after it
 has sent an uplink.
+
+Settings are not part of the keep-alive. After the firmware is known, Home
+Assistant reads them in a few batches, one per uplink, so they fill in over the
+first hour and again after each restart. Every change also asks the device to
+report the value it applied.
 
 A command therefore takes effect after the next keep-alive, and the device
 reports the result in the one after that. Home Assistant shows the requested
@@ -94,8 +125,19 @@ automation:
 - Values stay unknown after a restart until the next keep-alive.
 - Several commands sent within one keep-alive period are delivered one uplink
   at a time, so the displayed value can briefly jump back.
-- Devices in manual control mode ignore the target temperature. The integration
-  expects the default automatic mode.
+- Manual mode ignores the target temperature, so it is refused there. On
+  firmware 5.0 and later the device returns to automatic after 12 hours without
+  a motor command.
+- A valve change must move the motor by at least 17 steps, because MClimate warns
+  that smaller moves make the device misbehave.
+- Automatic setback, offline target and the watchdog depend on when the device
+  considers itself offline. By default it resets after 24 hours without any
+  downlink when using unconfirmed uplinks.
+- Scale display levels are not configurable.
+
+These are deliberately not exposed: force-close and recalibration, which MClimate
+says must be avoided, force-attach, which must not be used on firmware 4.5 or 4.6,
+changing the AppEUI and AppKey, HT Sensor pairing, and heating schedules.
 
 ## Troubleshooting
 
