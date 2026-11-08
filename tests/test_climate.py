@@ -81,6 +81,18 @@ async def test_idle_when_valve_closed(
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.IDLE
 
 
+async def test_precise_target_report(
+    hass: HomeAssistant,
+    mock_connection: MockConnection,
+    descriptor: DeviceDescriptor,
+) -> None:
+    """A reported 0.1 degree target also shows the firmware accepts fractions."""
+    await send_uplink(hass, mock_connection, descriptor, f"520102{KEEP_ALIVE}")
+    state = hass.states.get(ENTITY_ID)
+    assert state.attributes[ATTR_TEMPERATURE] == 25.8
+    assert state.attributes["target_temp_step"] == 0.5
+
+
 async def test_set_whole_temperature(
     hass: HomeAssistant,
     mock_connection: MockConnection,
