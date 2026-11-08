@@ -1,0 +1,20 @@
+{
+  "domain": "mclimate_lorawan",
+  "name": "MClimate LoRaWAN",
+  "categories": ["climate.thermostats_heating"],
+  "codeowners": ["@alexanderniebuhr"],
+  "config_flow": true,
+  "connectivity": ["lorawan"],
+  "dependencies": ["lorawan"],
+  "documentation": "https://github.com/alexanderniebuhr/mclimate",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/alexanderniebuhr/mclimate/issues",
+  "lorawan": [
+    ["chirpstack", 824],
+    ["tts", "mclimate"]
+  ],
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}
