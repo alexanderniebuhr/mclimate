@@ -18,6 +18,7 @@ from custom_components.mclimate_lorawan.vicki import Vicki
 from homeassistant.components.lorawan import async_register_connection
 from homeassistant.config_entries import ConfigEntry, ConfigFlow
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 DOMAIN = "mclimate_lorawan"
@@ -116,6 +117,17 @@ async def setup_integration(
     assert await hass.config_entries.async_setup(connection_entry.entry_id)
     assert await hass.config_entries.async_setup(config_entry.entry_id)
     await hass.async_block_till_done()
+
+
+def entity_id_for(
+    hass: HomeAssistant, platform: str, descriptor: DeviceDescriptor, key: str
+) -> str:
+    """Find an entity by unique ID, independent of its translated name."""
+    entity_id = er.async_get(hass).async_get_entity_id(
+        platform, DOMAIN, f"{descriptor.network_id}:{descriptor.dev_eui}:{key}"
+    )
+    assert entity_id is not None
+    return entity_id
 
 
 async def send_uplink(

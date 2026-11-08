@@ -19,7 +19,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.util import dt as dt_util
 
-from .conftest import DOMAIN, send_uplink
+from .conftest import DOMAIN, entity_id_for, send_uplink
 
 
 async def test_setup_retries_after_connection_recovers(
@@ -134,4 +134,5 @@ async def test_invalid_uplink_keeps_values(
     """Invalid data leaves the previous values intact."""
     await send_uplink(hass, mock_connection, descriptor)
     await send_uplink(hass, mock_connection, descriptor, "a6")
-    assert hass.states.get("sensor.living_room_humidity").state == "46.88"
+    humidity = entity_id_for(hass, "sensor", descriptor, "humidity")
+    assert hass.states.get(humidity).state == "46.88"

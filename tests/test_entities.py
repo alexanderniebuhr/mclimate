@@ -14,7 +14,7 @@ from homeassistant.const import ATTR_ENTITY_ID, STATE_OFF, STATE_ON, STATE_UNKNO
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from .conftest import send_uplink
+from .conftest import entity_id_for, send_uplink
 
 pytestmark = pytest.mark.usefixtures("setup_integration")
 
@@ -25,28 +25,37 @@ async def test_sensors(
     descriptor: DeviceDescriptor,
 ) -> None:
     """A keep-alive updates every enabled sensor."""
-    assert hass.states.get("sensor.living_room_humidity").state == STATE_UNKNOWN
+    humidity = entity_id_for(hass, "sensor", descriptor, "humidity")
+    assert hass.states.get(humidity).state == STATE_UNKNOWN
 
     await send_uplink(hass, mock_connection, descriptor)
 
-    assert hass.states.get("sensor.living_room_temperature").state == "22.53"
-    assert hass.states.get("sensor.living_room_humidity").state == "46.88"
-    assert hass.states.get("sensor.living_room_valve_openness").state == "17"
-    assert hass.states.get("sensor.living_room_battery_voltage").state == "3.5"
+    for key, value in (
+        ("temperature", "22.53"),
+        ("humidity", "46.88"),
+        ("valve_openness", "17"),
+        ("battery_voltage", "3.5"),
+    ):
+        entity_id = entity_id_for(hass, "sensor", descriptor, key)
+        assert hass.states.get(entity_id).state == value
 
 
 async def test_disabled_by_default(
-    hass: HomeAssistant, entity_registry: er.EntityRegistry
+    hass: HomeAssistant,
+    entity_registry: er.EntityRegistry,
+    descriptor: DeviceDescriptor,
 ) -> None:
     """Rarely needed entities start disabled."""
-    for entity_id in (
-        "sensor.living_room_battery",
-        "sensor.living_room_motor_position",
-        "sensor.living_room_motor_range",
-        "binary_sensor.living_room_high_motor_consumption",
-        "binary_sensor.living_room_low_motor_consumption",
+    for platform, key in (
+        ("sensor", "battery"),
+        ("sensor", "motor_position"),
+        ("sensor", "motor_range"),
+        ("binary_sensor", "high_motor_consumption"),
+        ("binary_sensor", "low_motor_consumption"),
     ):
-        entry = entity_registry.async_get(entity_id)
+        entry = entity_registry.async_get(
+            entity_id_for(hass, platform, descriptor, key)
+        )
         assert entry is not None
         assert entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
