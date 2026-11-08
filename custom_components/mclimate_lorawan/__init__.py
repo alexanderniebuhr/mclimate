@@ -19,6 +19,7 @@ type MClimateConfigEntry = ConfigEntry[DeviceManager[Vicki, VickiCoordinator]]
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.CLIMATE,
     Platform.NUMBER,
     Platform.SELECT,
