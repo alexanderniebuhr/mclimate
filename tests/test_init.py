@@ -76,25 +76,34 @@ async def test_connection_loss(
 async def test_removed_device(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
+    config_entry: MockConfigEntry,
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
     """A device removed from the server leaves the device registry."""
     identifier = (DOMAIN, f"network:{descriptor.dev_eui}")
-    assert device_registry.async_get_device(identifiers={identifier})
+    assert device_registry.async_get_device_by_identifier(
+        identifier, config_entry.entry_id
+    )
 
     mock_connection.emit(
         RemovedEvent(descriptor=descriptor, received_at=dt_util.utcnow())
     )
     await hass.async_block_till_done()
 
-    assert device_registry.async_get_device(identifiers={identifier}) is None
+    assert (
+        device_registry.async_get_device_by_identifier(
+            identifier, config_entry.entry_id
+        )
+        is None
+    )
 
 
 @pytest.mark.usefixtures("setup_integration")
 async def test_firmware_is_requested_once_and_registered(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
+    config_entry: MockConfigEntry,
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
@@ -108,8 +117,8 @@ async def test_firmware_is_requested_once_and_registered(
 
     await send_uplink(hass, mock_connection, descriptor, "042343")
 
-    device = device_registry.async_get_device(
-        identifiers={(DOMAIN, f"network:{descriptor.dev_eui}")}
+    device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, f"network:{descriptor.dev_eui}"), config_entry.entry_id
     )
     assert device is not None
     assert device.hw_version == "2.3"

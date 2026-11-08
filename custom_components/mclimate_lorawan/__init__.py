@@ -26,7 +26,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MClimateConfigEntry) -> 
         hass,
         entry,
         create_collection=VickiCollection,
-        create_coordinator=VickiCoordinator,
+        create_coordinator=lambda hass, device: VickiCoordinator(
+            hass, device, entry.entry_id
+        ),
     )
     entry.async_on_unload(manager.close)
     try:

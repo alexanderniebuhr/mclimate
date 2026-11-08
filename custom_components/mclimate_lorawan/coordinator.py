@@ -30,7 +30,7 @@ def _format_version(version: Version | None) -> str | None:
 class VickiCoordinator(DataUpdateCoordinator[Vicki]):
     """Coordinate updates of one Vicki."""
 
-    def __init__(self, hass: HomeAssistant, device: Vicki) -> None:
+    def __init__(self, hass: HomeAssistant, device: Vicki, entry_id: str) -> None:
         """Subscribe once to the device model."""
         super().__init__(
             hass,
@@ -39,6 +39,7 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
             config_entry=None,
             name=device.descriptor.name,
         )
+        self._entry_id = entry_id
         self._registered_firmware: Version | None = None
         self._versions_requested_at: float | None = None
         self._version_task: asyncio.Task[None] | None = None
@@ -80,8 +81,8 @@ class VickiCoordinator(DataUpdateCoordinator[Vicki]):
         if firmware is None or firmware == self._registered_firmware:
             return
         registry = dr.async_get(self.hass)
-        if device := registry.async_get_device(
-            identifiers={device_identifier(DOMAIN, self.data)}
+        if device := registry.async_get_device_by_identifier(
+            device_identifier(DOMAIN, self.data), self._entry_id
         ):
             self._registered_firmware = firmware
             registry.async_update_device(
