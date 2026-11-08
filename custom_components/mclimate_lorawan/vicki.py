@@ -15,14 +15,13 @@ from lorawan_connection import (
 from .protocol import (
     DOWNLINK_PORT,
     GET_VERSIONS,
+    MIN_FIRMWARE,
     MIN_TARGET_TEMPERATURE,
-    PRECISE_TARGET_FIRMWARE,
     KeepAlive,
     Version,
     VickiProtocolError,
     decode_uplink,
     encode_child_lock,
-    encode_precise_target_temperature,
     encode_target_temperature,
 )
 
@@ -35,8 +34,8 @@ DEFAULT_HEATING_TARGET = 20.0
 _PENDING_UPLINKS = 2
 
 
-class UnsupportedCommand(Exception):
-    """The device firmware cannot run a command. The argument names the reason."""
+class CommandRejected(Exception):
+    """A command cannot be sent. The argument names the reason."""
 
 
 @dataclass(slots=True)
@@ -71,7 +70,6 @@ class Vicki(Device):
         self.keep_alive: KeepAlive | None = None
         self.hardware_version: Version | None = None
         self.firmware_version: Version | None = None
-        self.supports_precise_target = False
         self.last_heating_target = DEFAULT_HEATING_TARGET
         self._reported_target: float | None = None
         self._pending_target: _Pending[float] | None = None
@@ -110,17 +108,19 @@ class Vicki(Device):
         if uplink.firmware_version is not None:
             self.hardware_version = uplink.hardware_version
             self.firmware_version = uplink.firmware_version
-            self.supports_precise_target = (
-                uplink.firmware_version >= PRECISE_TARGET_FIRMWARE
-            )
-        if uplink.precise_target is not None:
-            self.supports_precise_target = True
         if (target := uplink.target_temperature) is not None:
             self._reported_target = target
             self._pending_target = _settle(self._pending_target, target)
             if target > MIN_TARGET_TEMPERATURE:
                 self.last_heating_target = target
         self.notify()
+
+    def _check_firmware(self, minimum: Version = MIN_FIRMWARE) -> None:
+        """Refuse a command the firmware is known not to support."""
+        if (self.keep_alive is not None and self.keep_alive.legacy_firmware) or (
+            self.firmware_version is not None and self.firmware_version < minimum
+        ):
+            raise CommandRejected("firmware_too_old")
 
     async def _async_send(self, data: bytes) -> None:
         """Queue a command for the next receive window of the device."""
@@ -130,16 +130,9 @@ class Vicki(Device):
 
     async def async_set_target_temperature(self, value: float) -> None:
         """Queue a new target temperature."""
-        if self.keep_alive is not None and self.keep_alive.legacy_firmware:
-            raise UnsupportedCommand("firmware_too_old")
+        self._check_firmware()
         value = round(value, 1)
-        if value.is_integer():
-            data = encode_target_temperature(int(value))
-        elif self.supports_precise_target:
-            data = encode_precise_target_temperature(value)
-        else:
-            raise UnsupportedCommand("fractional_target_unsupported")
-        await self._async_send(data)
+        await self._async_send(encode_target_temperature(value))
         self._pending_target = _Pending(value)
         if value > MIN_TARGET_TEMPERATURE:
             self.last_heating_target = value
@@ -147,6 +140,7 @@ class Vicki(Device):
 
     async def async_set_child_lock(self, enabled: bool) -> None:
         """Queue a new child lock state."""
+        self._check_firmware()
         await self._async_send(encode_child_lock(enabled))
         self._pending_child_lock = _Pending(enabled)
         self.notify()

@@ -67,10 +67,7 @@
       "message": "Timed out queueing the command on the LoRaWAN server."
     },
     "firmware_too_old": {
-      "message": "Setting the target temperature requires firmware 3.5 or later."
-    },
-    "fractional_target_unsupported": {
-      "message": "This device only accepts whole-degree target temperatures."
+      "message": "This command needs newer device firmware. The integration requires firmware 4.3 or later, and some settings need 4.4 or 4.6."
     }
   }
 }

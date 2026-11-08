@@ -49,6 +49,7 @@ class VickiClimate(VickiEntity, ClimateEntity):
     _attr_min_temp = MIN_TARGET_TEMPERATURE
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_precision = PRECISION_TENTHS
+    _attr_target_temperature_step = 0.5
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TURN_ON
@@ -71,12 +72,6 @@ class VickiClimate(VickiEntity, ClimateEntity):
     def native_target_temperature(self) -> float | None:
         """Return the target temperature."""
         return self.device.target_temperature
-
-    @property
-    @override
-    def target_temperature_step(self) -> float:
-        """Return the smallest step the firmware can apply."""
-        return 0.5 if self.device.supports_precise_target else 1.0
 
     @property
     @override

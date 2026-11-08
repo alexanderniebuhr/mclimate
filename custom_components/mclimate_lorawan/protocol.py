@@ -6,7 +6,7 @@ from typing import Any
 DOWNLINK_PORT = 1
 MIN_TARGET_TEMPERATURE = 5
 MAX_TARGET_TEMPERATURE = 30
-PRECISE_TARGET_FIRMWARE = (4, 3)
+MIN_FIRMWARE = (4, 3)
 
 GET_VERSIONS = b"\x04"
 
@@ -183,12 +183,7 @@ def decode_uplink(data: bytes) -> Uplink:
     return Uplink(**fields)
 
 
-def encode_target_temperature(value: int) -> bytes:
-    """Encode a whole-degree target temperature."""
-    return bytes((0x0E, value))
-
-
-def encode_precise_target_temperature(value: float) -> bytes:
+def encode_target_temperature(value: float) -> bytes:
     """Encode a target temperature with 0.1 degree resolution."""
     tenths = round(value * 10)
     return bytes((0x51, tenths >> 8, tenths & 0xFF))

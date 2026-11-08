@@ -8,8 +8,8 @@ so it needs no credentials of its own.
 
 | Device | Status |
 | --- | --- |
-| MClimate Vicki LoRaWAN (firmware 3.5 or later) | Supported |
-| MClimate Vicki LoRaWAN (firmware before 3.5) | Measurements only |
+| MClimate Vicki LoRaWAN (firmware 4.3 or later) | Supported |
+| MClimate Vicki LoRaWAN (firmware before 4.3) | Measurements only |
 | Other MClimate devices | Not supported |
 
 ## Prerequisites
@@ -91,9 +91,6 @@ automation:
 - The Vicki has no off command. **Off sets the target to 5 °C**, so the valve is
   not forced closed and frost protection stays active. A target of 5 °C always
   shows as off.
-- Half-degree targets need firmware 4.3 or later. Until the device has reported
-  its firmware, which can take two keep-alive periods, only whole degrees are
-  accepted.
 - Values stay unknown after a restart until the next keep-alive.
 - Several commands sent within one keep-alive period are delivered one uplink
   at a time, so the displayed value can briefly jump back.

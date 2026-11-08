@@ -13,7 +13,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .const import DOMAIN
 from .coordinator import VickiCoordinator
 from .protocol import KeepAlive
-from .vicki import UnsupportedCommand, Vicki
+from .vicki import CommandRejected, Vicki
 
 COMMAND_TIMEOUT = 30
 
@@ -45,7 +45,7 @@ class VickiEntity(LoRaWANEntity[Vicki]):
         try:
             async with timeout(COMMAND_TIMEOUT):
                 await command
-        except UnsupportedCommand as err:
+        except CommandRejected as err:
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key=err.args[0]
             ) from err

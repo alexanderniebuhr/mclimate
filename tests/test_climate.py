@@ -67,7 +67,7 @@ async def test_reported_state(
     assert state.attributes["current_temperature"] == 22.5
     assert state.attributes[ATTR_TEMPERATURE] == 20
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.HEATING
-    assert state.attributes["target_temp_step"] == 1.0
+    assert state.attributes["target_temp_step"] == 0.5
 
 
 async def test_idle_when_valve_closed(
@@ -86,11 +86,10 @@ async def test_precise_target_report(
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
-    """A reported 0.1 degree target also shows the firmware accepts fractions."""
+    """A reported 0.1 degree target replaces the rounded keep-alive value."""
     await send_uplink(hass, mock_connection, descriptor, f"520102{KEEP_ALIVE}")
     state = hass.states.get(ENTITY_ID)
     assert state.attributes[ATTR_TEMPERATURE] == 25.8
-    assert state.attributes["target_temp_step"] == 0.5
 
 
 async def test_set_whole_temperature(
@@ -98,13 +97,13 @@ async def test_set_whole_temperature(
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
-    """Whole degrees use the universal command and show immediately."""
+    """A new target is queued with 0.1 degree resolution and shows immediately."""
     await send_uplink(hass, mock_connection, descriptor)
 
     await set_temperature(hass, temperature=21)
 
     downlink = list(mock_connection.downlinks.values())[-1]
-    assert downlink.data == bytes.fromhex("0e15")
+    assert downlink.data == bytes.fromhex("5100d2")
     assert downlink.f_port == 1
     assert not downlink.confirmed
     assert hass.states.get(ENTITY_ID).attributes[ATTR_TEMPERATURE] == 21
@@ -131,25 +130,24 @@ async def test_set_fractional_temperature(
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
-    """Firmware 4.3 accepts tenths of a degree."""
-    await send_uplink(hass, mock_connection, descriptor, f"042343{KEEP_ALIVE}")
-    assert hass.states.get(ENTITY_ID).attributes["target_temp_step"] == 0.5
+    """Fractions are sent in tenths of a degree."""
+    await send_uplink(hass, mock_connection, descriptor)
 
     await set_temperature(hass, temperature=21.5)
 
     assert last_data(mock_connection) == "5100d7"
 
 
-async def test_fractional_temperature_unsupported(
+async def test_old_firmware_refused(
     hass: HomeAssistant,
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
-    """Refuse a fraction before the firmware is known to accept it."""
+    """Firmware before 4.3 is not supported."""
     await send_uplink(hass, mock_connection, descriptor, f"042342{KEEP_ALIVE}")
     with pytest.raises(ServiceValidationError) as err:
         await set_temperature(hass, temperature=21.5)
-    assert err.value.translation_key == "fractional_target_unsupported"
+    assert err.value.translation_key == "firmware_too_old"
 
 
 async def test_legacy_firmware_refused(
@@ -157,7 +155,7 @@ async def test_legacy_firmware_refused(
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
-    """Firmware before 3.5 has no target temperature command."""
+    """A legacy keep-alive means firmware before 3.5."""
     await send_uplink(hass, mock_connection, descriptor, "011D5A78FA2C01F080")
     with pytest.raises(ServiceValidationError) as err:
         await set_temperature(hass, temperature=21)
@@ -206,13 +204,13 @@ async def test_off_and_back_on(
     await send_uplink(hass, mock_connection, descriptor)
 
     await set_hvac_mode(hass, HVACMode.OFF)
-    assert last_data(mock_connection) == "0e05"
+    assert last_data(mock_connection) == "510032"
     state = hass.states.get(ENTITY_ID)
     assert state.state == HVACMode.OFF
     assert state.attributes[ATTR_HVAC_ACTION] == HVACAction.OFF
 
     await set_hvac_mode(hass, HVACMode.HEAT)
-    assert last_data(mock_connection) == "0e14"
+    assert last_data(mock_connection) == "5100c8"
     assert hass.states.get(ENTITY_ID).state == HVACMode.HEAT
 
 
@@ -236,4 +234,4 @@ async def test_set_temperature_with_off_mode(
     """The off mode wins over a temperature in the same action."""
     await send_uplink(hass, mock_connection, descriptor)
     await set_temperature(hass, temperature=21, hvac_mode=HVACMode.OFF)
-    assert last_data(mock_connection) == "0e05"
+    assert last_data(mock_connection) == "510032"

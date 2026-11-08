@@ -6,7 +6,6 @@ from custom_components.mclimate_lorawan.protocol import (
     VickiProtocolError,
     decode_uplink,
     encode_child_lock,
-    encode_precise_target_temperature,
     encode_target_temperature,
 )
 
@@ -161,7 +160,6 @@ def test_invalid_uplink(payload: str) -> None:
 
 def test_encoders() -> None:
     """Match the documented downlink examples."""
-    assert encode_target_temperature(20) == bytes.fromhex("0E14")
-    assert encode_precise_target_temperature(25.8) == bytes.fromhex("510102")
+    assert encode_target_temperature(25.8) == bytes.fromhex("510102")
     assert encode_child_lock(True) == bytes.fromhex("0701")
     assert encode_child_lock(False) == bytes.fromhex("0700")
