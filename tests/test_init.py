@@ -1,12 +1,14 @@
 """Test integration setup and device lifecycle."""
 
 from datetime import timedelta
+import logging
 from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 from lorawan_connection import (
     ConnectionUnavailable,
     DeviceDescriptor,
+    DownlinkError,
     RemovedEvent,
 )
 from lorawan_connection.mock import MockConnection
@@ -73,6 +75,24 @@ async def test_connection_loss(
 
 
 @pytest.mark.usefixtures("setup_integration")
+async def test_connection_recovery_is_logged(
+    hass: HomeAssistant,
+    connection_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Entities and the log recover when the LoRaWAN server returns."""
+    assert await hass.config_entries.async_unload(connection_entry.entry_id)
+    await hass.async_block_till_done()
+
+    with caplog.at_level(logging.INFO):
+        assert await hass.config_entries.async_setup(connection_entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert "Connection to Living room restored" in caplog.text
+    assert hass.states.get("climate.living_room").state == "unknown"
+
+
+@pytest.mark.usefixtures("setup_integration")
 async def test_removed_device(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
@@ -123,6 +143,25 @@ async def test_firmware_is_requested_once_and_registered(
     assert device is not None
     assert device.hw_version == "2.3"
     assert device.sw_version == "4.3"
+
+
+@pytest.mark.usefixtures("setup_integration")
+async def test_failed_firmware_request_is_retried(
+    hass: HomeAssistant,
+    mock_connection: MockConnection,
+    descriptor: DeviceDescriptor,
+) -> None:
+    """A request the server rejected is sent again on the next uplink."""
+    with patch.object(
+        mock_connection, "async_send_downlink", side_effect=DownlinkError("no")
+    ):
+        await send_uplink(hass, mock_connection, descriptor)
+    assert not mock_connection.downlinks
+
+    await send_uplink(hass, mock_connection, descriptor)
+
+    [downlink] = mock_connection.downlinks.values()
+    assert downlink.data == bytes.fromhex("04")
 
 
 @pytest.mark.usefixtures("setup_integration")
