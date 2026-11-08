@@ -80,6 +80,8 @@ class VickiClimate(VickiEntity, ClimateEntity):
         target = self.device.target_temperature
         if target is None:
             return None
+        if self.device.settings.get("operating_mode") == "manual":
+            return HVACMode.HEAT if self.device.valve_openness else HVACMode.OFF
         return HVACMode.OFF if target <= MIN_TARGET_TEMPERATURE else HVACMode.HEAT
 
     @property
