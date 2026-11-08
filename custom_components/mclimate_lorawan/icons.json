@@ -1,5 +1,28 @@
 {
   "entity": {
+    "binary_sensor": {
+      "anti_freeze": {
+        "default": "mdi:snowflake-alert"
+      },
+      "attached_backplate": {
+        "default": "mdi:link-variant"
+      },
+      "calibration_failed": {
+        "default": "mdi:wrench-clock"
+      },
+      "high_motor_consumption": {
+        "default": "mdi:engine"
+      },
+      "low_motor_consumption": {
+        "default": "mdi:engine-outline"
+      },
+      "open_window": {
+        "default": "mdi:window-open-variant"
+      },
+      "sensor_broken": {
+        "default": "mdi:thermometer-alert"
+      }
+    },
     "sensor": {
       "motor_position": {
         "default": "mdi:cog"

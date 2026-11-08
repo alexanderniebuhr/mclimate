@@ -13,6 +13,32 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "anti_freeze": {
+        "name": "Anti-freeze"
+      },
+      "attached_backplate": {
+        "name": "Attached to backplate"
+      },
+      "battery_low": {
+        "name": "Battery low"
+      },
+      "calibration_failed": {
+        "name": "Motor calibration failed"
+      },
+      "high_motor_consumption": {
+        "name": "High motor consumption"
+      },
+      "low_motor_consumption": {
+        "name": "Low motor consumption"
+      },
+      "open_window": {
+        "name": "Open window"
+      },
+      "sensor_broken": {
+        "name": "Temperature sensor broken"
+      }
+    },
     "sensor": {
       "battery_voltage": {
         "name": "Battery voltage"
