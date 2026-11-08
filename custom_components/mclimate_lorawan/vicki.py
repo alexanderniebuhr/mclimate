@@ -111,11 +111,6 @@ class Vicki(Device):
             return self._pending_valve.value
         return self.keep_alive.valve_openness if self.keep_alive is not None else None
 
-    def supports_setting(self, key: str) -> bool:
-        """Return false once the firmware is known to lack a setting."""
-        minimum = REGISTER_BY_FIELD[key].min_firmware
-        return self.firmware_version is None or self.firmware_version >= minimum
-
     @override
     def handle_event(self, event: DeviceEvent) -> None:
         """Apply a complete uplink, leaving old values intact on invalid data."""
@@ -161,14 +156,12 @@ class Vicki(Device):
         if "algorithm_paused" in self.settings:
             self.settings["algorithm_paused"] = False
 
-    def _check_firmware(self, minimum: Version = MIN_FIRMWARE) -> None:
-        """Refuse a command the firmware is known not to support."""
+    def _check_firmware(self) -> None:
+        """Refuse commands on firmware known to be unsupported."""
         if (self.keep_alive is not None and self.keep_alive.legacy_firmware) or (
-            self.firmware_version is not None and self.firmware_version < minimum
+            self.firmware_version is not None and self.firmware_version < MIN_FIRMWARE
         ):
             raise CommandRejected("firmware_too_old")
-        if self.firmware_version is None and minimum > MIN_FIRMWARE:
-            raise CommandRejected("firmware_unknown")
 
     def _build_state_request(self) -> bytes | None:
         """Return the next batch of questions for the device, if any are left."""
@@ -182,7 +175,6 @@ class Vicki(Device):
             register
             for register in REGISTERS
             if register.fields[0] not in self.settings
-            and self.firmware_version >= register.min_firmware
         ]
         return build_settings_request(missing) if missing else None
 
@@ -238,9 +230,7 @@ class Vicki(Device):
     async def async_set_setting(self, key: str, value: Any) -> None:
         """Queue a setting and ask the device to report what it applied."""
         register = REGISTER_BY_FIELD[key]
-        self._check_firmware(register.min_firmware)
-        if key == "display_units" and value == "scale":
-            self._check_firmware((4, 6))
+        self._check_firmware()
         values = [
             value if name == key else self.settings.get(name)
             for name in register.fields

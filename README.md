@@ -8,8 +8,8 @@ so it needs no credentials of its own.
 
 | Device | Status |
 | --- | --- |
-| MClimate Vicki LoRaWAN (firmware 4.3 or later) | Supported |
-| MClimate Vicki LoRaWAN (firmware before 4.3) | Measurements only |
+| MClimate Vicki LoRaWAN (firmware 5.0 or later) | Supported |
+| MClimate Vicki LoRaWAN (firmware before 5.0) | Measurements only |
 | Other MClimate devices | Not supported |
 
 ## Prerequisites
@@ -50,10 +50,6 @@ and devices added later appear automatically.
 | Valve minimum and maximum, PI gains, integral limit, run period, hysteresis | Settings, disabled by default |
 | Primary mode, display units, LED duration, keep child lock when offline, pause algorithm | Settings, disabled by default |
 | Uplink type, join retry period, watchdog periods, restart | Settings, disabled by default |
-
-Settings marked for firmware 4.4 or 4.6 by MClimate become unavailable on older
-firmware. These are display units (4.4), and automatic setback, offline target,
-LED duration, pause algorithm and the scale display (4.6).
 
 ## Options
 

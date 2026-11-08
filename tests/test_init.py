@@ -135,14 +135,14 @@ async def test_firmware_is_requested_once_and_registered(
     assert downlink.data == bytes.fromhex("04")
     assert not downlink.confirmed
 
-    await send_uplink(hass, mock_connection, descriptor, "042343")
+    await send_uplink(hass, mock_connection, descriptor, "042350")
 
     device = device_registry.async_get_device_by_identifier(
         (DOMAIN, f"network:{descriptor.dev_eui}"), config_entry.entry_id
     )
     assert device is not None
     assert device.hw_version == "2.3"
-    assert device.sw_version == "4.3"
+    assert device.sw_version == "5.0"
 
 
 @pytest.mark.usefixtures("setup_integration")

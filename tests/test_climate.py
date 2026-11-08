@@ -143,7 +143,7 @@ async def test_old_firmware_refused(
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
-    """Firmware before 4.3 is not supported."""
+    """Firmware before 5.0 is not supported."""
     await send_uplink(hass, mock_connection, descriptor, f"042342{KEEP_ALIVE}")
     with pytest.raises(ServiceValidationError) as err:
         await set_temperature(hass, temperature=21.5)

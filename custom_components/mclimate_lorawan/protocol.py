@@ -7,7 +7,7 @@ from typing import Any
 DOWNLINK_PORT = 1
 MIN_TARGET_TEMPERATURE = 5
 MAX_TARGET_TEMPERATURE = 30
-MIN_FIRMWARE = (4, 3)
+MIN_FIRMWARE = (5, 0)
 
 GET_VERSIONS = b"\x04"
 RESTART = b"\x30"
@@ -53,7 +53,6 @@ class Register:
     decode: Callable[[bytes], tuple[Any, ...]]
     encode: Callable[..., bytes]
     error: Callable[..., str | None] | None = None
-    min_firmware: Version = MIN_FIRMWARE
 
 
 def _number(
@@ -62,7 +61,6 @@ def _number(
     set_code: int,
     *,
     scale: float = 1,
-    min_firmware: Version = MIN_FIRMWARE,
     error: Callable[..., str | None] | None = None,
 ) -> Register:
     """Describe a setting stored as one byte, where value = byte * scale."""
@@ -73,18 +71,10 @@ def _number(
         decode=lambda data: (round(data[0] * scale, 1),),
         encode=lambda value: bytes((set_code, round(value / scale))),
         error=error,
-        min_firmware=min_firmware,
     )
 
 
-def _option(
-    name: str,
-    get_code: int,
-    set_code: int,
-    options: tuple[str, ...],
-    *,
-    min_firmware: Version = MIN_FIRMWARE,
-) -> Register:
+def _option(name: str, get_code: int, set_code: int, options: tuple[str, ...]) -> Register:
     """Describe a setting that selects one of the options by index."""
     return Register(
         fields=(name,),
@@ -92,17 +82,10 @@ def _option(
         length=1,
         decode=lambda data: (options[data[0]] if data[0] < len(options) else None,),
         encode=lambda value: bytes((set_code, options.index(value))),
-        min_firmware=min_firmware,
     )
 
 
-def _switch(
-    name: str,
-    get_code: int,
-    set_code: int,
-    *,
-    min_firmware: Version = MIN_FIRMWARE,
-) -> Register:
+def _switch(name: str, get_code: int, set_code: int) -> Register:
     """Describe a setting that is on or off."""
     return Register(
         fields=(name,),
@@ -110,7 +93,6 @@ def _switch(
         length=1,
         decode=lambda data: (bool(data[0]),),
         encode=lambda value: bytes((set_code, int(value))),
-        min_firmware=min_firmware,
     )
 
 
@@ -216,7 +198,7 @@ REGISTERS = (
             (0x53, max(0, min(56, round(value / _OFFSET_STEP) + 28)))
         ),
     ),
-    _option("display_units", 0x56, 0x55, DISPLAY_UNITS, min_firmware=(4, 4)),
+    _option("display_units", 0x56, 0x55, DISPLAY_UNITS),
     _option("uplink_type", 0x1B, 0x11, UPLINK_TYPES),
     _number("join_retry_period", 0x19, 0x10, scale=5),
     Register(
@@ -228,8 +210,8 @@ REGISTERS = (
             (0x1C, round(confirmed), round(unconfirmed))
         ),
     ),
-    _number("setback_time", 0x62, 0x61, scale=10, min_firmware=(4, 6)),
-    _number("led_duration", 0x64, 0x63, scale=0.5, min_firmware=(4, 6)),
+    _number("setback_time", 0x62, 0x61, scale=10),
+    _number("led_duration", 0x64, 0x63, scale=0.5),
     Register(
         fields=("offline_target",),
         get_code=0x66,
@@ -237,9 +219,8 @@ REGISTERS = (
         decode=lambda data: (round(int.from_bytes(data) / 10, 1),),
         encode=lambda value: bytes((0x65,)) + round(value * 10).to_bytes(2),
         error=_offline_target_error,
-        min_firmware=(4, 6),
     ),
-    _switch("algorithm_paused", 0x68, 0x67, min_firmware=(4, 6)),
+    _switch("algorithm_paused", 0x68, 0x67),
 )
 
 REGISTER_BY_FIELD = {name: reg for reg in REGISTERS for name in reg.fields}

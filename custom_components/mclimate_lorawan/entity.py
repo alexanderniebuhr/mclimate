@@ -63,14 +63,6 @@ class VickiSettingEntity(VickiEntity):
     """Entity for a setting the device stores and reports on request."""
 
     @property
-    @override
-    def available(self) -> bool:
-        """Hide settings the device firmware does not have."""
-        return super().available and self.device.supports_setting(
-            self.entity_description.key
-        )
-
-    @property
     def setting_value(self) -> Any:
         """Return the last known value of the setting."""
         return self.device.settings.get(self.entity_description.key)

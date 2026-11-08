@@ -78,18 +78,17 @@ def link_room_sensor(
     )
 
 
-async def test_settings_are_requested_for_the_firmware(
+async def test_settings_are_requested_once_firmware_is_known(
     hass: HomeAssistant,
     mock_connection: MockConnection,
     descriptor: DeviceDescriptor,
 ) -> None:
-    """Only ask for settings the firmware has."""
-    await send_uplink(hass, mock_connection, descriptor, f"042343{KEEP_ALIVE}")
+    """The first batch follows the firmware report."""
+    await send_uplink(hass, mock_connection, descriptor, f"042350{KEEP_ALIVE}")
 
     request = bytes.fromhex(last_data(mock_connection))
-    assert 0x12 in request
-    assert 0x56 not in request
-    assert 0x62 not in request
+    assert request[0] == 0x12
+    assert len(request) > 1
 
 
 async def test_next_batch_follows_an_answer(
@@ -98,7 +97,7 @@ async def test_next_batch_follows_an_answer(
     descriptor: DeviceDescriptor,
 ) -> None:
     """An answer lets the next questions go out without waiting."""
-    await send_uplink(hass, mock_connection, descriptor, f"042343{KEEP_ALIVE}")
+    await send_uplink(hass, mock_connection, descriptor, f"042350{KEEP_ALIVE}")
     assert len(mock_connection.downlinks) == 1
 
     await send_uplink(hass, mock_connection, descriptor, f"1209{KEEP_ALIVE}")
@@ -184,43 +183,6 @@ async def test_invalid_combination_is_refused(
 
     assert err.value.translation_key == "invalid_target_limits"
     assert len(mock_connection.downlinks) == count
-
-
-async def test_newer_settings_follow_the_firmware(
-    hass: HomeAssistant,
-    mock_connection: MockConnection,
-    descriptor: DeviceDescriptor,
-) -> None:
-    """A setting from firmware 4.6 is unavailable on 4.3 and works on 4.6."""
-    entity_id = entity_id_for(hass, "number", descriptor, "setback_time")
-    await send_uplink(hass, mock_connection, descriptor, f"042343{KEEP_ALIVE}")
-    assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
-
-    await send_uplink(hass, mock_connection, descriptor, f"042346{KEEP_ALIVE}")
-    await set_number(hass, descriptor, "setback_time", 60)
-
-    assert last_data(mock_connection) == "610662"
-
-
-async def test_newer_setting_waits_for_the_firmware(
-    hass: HomeAssistant, descriptor: DeviceDescriptor
-) -> None:
-    """Do not send a command that may not exist on the device."""
-    with pytest.raises(ServiceValidationError) as err:
-        await set_number(hass, descriptor, "setback_time", 60)
-    assert err.value.translation_key == "firmware_unknown"
-
-
-async def test_scale_display_needs_firmware_46(
-    hass: HomeAssistant,
-    mock_connection: MockConnection,
-    descriptor: DeviceDescriptor,
-) -> None:
-    """Scale is a newer choice of an older setting."""
-    await send_uplink(hass, mock_connection, descriptor, f"042344{KEEP_ALIVE}")
-    with pytest.raises(ServiceValidationError) as err:
-        await select(hass, descriptor, "display_units", "scale")
-    assert err.value.translation_key == "firmware_too_old"
 
 
 async def test_operating_mode(
@@ -310,7 +272,7 @@ async def test_new_target_ends_algorithm_pause(
 ) -> None:
     """The device resumes its algorithm when the target changes."""
     entity_id = entity_id_for(hass, "switch", descriptor, "algorithm_paused")
-    await send_uplink(hass, mock_connection, descriptor, f"0423466801{KEEP_ALIVE}")
+    await send_uplink(hass, mock_connection, descriptor, f"0423506801{KEEP_ALIVE}")
     assert hass.states.get(entity_id).state == STATE_ON
 
     await hass.services.async_call(
@@ -330,7 +292,7 @@ async def test_manual_ring_change_ends_algorithm_pause(
 ) -> None:
     """Turning the ring also resumes the algorithm."""
     entity_id = entity_id_for(hass, "switch", descriptor, "algorithm_paused")
-    await send_uplink(hass, mock_connection, descriptor, f"0423466801{KEEP_ALIVE}")
+    await send_uplink(hass, mock_connection, descriptor, f"0423506801{KEEP_ALIVE}")
 
     await send_uplink(hass, mock_connection, descriptor, f"2816{KEEP_ALIVE}")
 
