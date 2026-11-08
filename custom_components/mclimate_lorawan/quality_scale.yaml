@@ -1,0 +1,83 @@
+rules:
+  action-setup:
+    status: exempt
+    comment: No actions are registered.
+  appropriate-polling:
+    status: exempt
+    comment: Device reports arrive through LoRaWAN subscriptions.
+  brands: done
+  common-modules: done
+  config-flow: done
+  config-flow-test-coverage: done
+  dependency-transparency: done
+  docs-actions:
+    status: exempt
+    comment: No actions are registered.
+  docs-conditions:
+    status: exempt
+    comment: No conditions are registered.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  docs-triggers:
+    status: exempt
+    comment: No triggers are registered.
+  entity-event-setup: done
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+  action-exceptions: done
+  config-entry-unloading: done
+  docs-configuration-parameters:
+    status: exempt
+    comment: There is no options flow.
+  docs-installation-parameters:
+    status: exempt
+    comment: Setup has no fields.
+  entity-unavailable: done
+  integration-owner: done
+  log-when-unavailable: done
+  parallel-updates: done
+  reauthentication-flow:
+    status: exempt
+    comment: Credentials and reauthentication belong to the connection integrations.
+  test-coverage:
+    status: todo
+    comment: Coverage has to be measured in CI against a Core checkout.
+  devices: done
+  diagnostics: done
+  discovery: done
+  discovery-update-info:
+    status: exempt
+    comment: LoRaWAN discovery carries no connection data to update.
+  docs-data-update: done
+  docs-examples: done
+  docs-known-limitations: done
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices: done
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default: done
+  entity-translations: done
+  exception-translations: done
+  icon-translations: done
+  reconfiguration-flow:
+    status: exempt
+    comment: The entry has no settings to change.
+  repair-issues:
+    status: exempt
+    comment: Device problems are reported by diagnostic entities.
+  stale-devices: done
+  async-dependency: done
+  inject-websession:
+    status: exempt
+    comment: Consumes registered LoRaWAN connections.
+  strict-typing:
+    status: todo
+    comment: Strict mypy has to run against a Core checkout.
