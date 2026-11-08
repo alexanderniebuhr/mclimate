@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        core-ref: ["2026.11.0", "dev"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: home-assistant/core
+          ref: ${{ matrix.core-ref }}
+          path: core
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+      - name: Install Core and its test helpers
+        run: |
+          uv venv
+          uv pip install ./core ./core/packages/pytest-homeassistant \
+            -r core/requirements_test.txt \
+            "$(jq -r '.requirements[0]' core/homeassistant/components/lorawan/manifest.json)"
+      - name: Run tests
+        run: >-
+          uv run --no-project pytest tests
+          --cov=custom_components/mclimate_lorawan --cov-report=term-missing
