@@ -1,0 +1,15 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "MClimate is already set up.",
+      "no_lorawan_connections": "Set up a LoRaWAN connection first.",
+      "no_supported_devices": "No supported devices were found on your LoRaWAN connections.",
+      "single_instance_allowed": "MClimate is already set up."
+    },
+    "step": {
+      "confirm": {
+        "description": "Set up MClimate devices from your LoRaWAN connections."
+      }
+    }
+  }
+}
