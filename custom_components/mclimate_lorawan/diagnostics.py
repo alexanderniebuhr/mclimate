@@ -21,6 +21,7 @@ def _device_diagnostics(device: Vicki) -> dict[str, Any]:
         "firmware_version": device.firmware_version,
         "target_temperature": device.target_temperature,
         "child_lock": device.child_lock,
+        "settings": device.settings,
     }
 
 
