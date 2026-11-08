@@ -57,3 +57,26 @@ class VickiEntity(LoRaWANEntity[Vicki]):
             raise HomeAssistantError(
                 translation_domain=DOMAIN, translation_key="command_failed"
             ) from err
+
+
+class VickiSettingEntity(VickiEntity):
+    """Entity for a setting the device stores and reports on request."""
+
+    @property
+    @override
+    def available(self) -> bool:
+        """Hide settings the device firmware does not have."""
+        return super().available and self.device.supports_setting(
+            self.entity_description.key
+        )
+
+    @property
+    def setting_value(self) -> Any:
+        """Return the last known value of the setting."""
+        return self.device.settings.get(self.entity_description.key)
+
+    async def async_set_setting(self, value: Any) -> None:
+        """Queue a new value for the setting."""
+        await self.async_send_command(
+            self.device.async_set_setting(self.entity_description.key, value)
+        )
